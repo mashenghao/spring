@@ -23,6 +23,8 @@ import org.springframework.core.io.Resource;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
+import java.util.Arrays;
+
 /**
  * Standalone XML application context, taking the context definition files
  * from the class path, interpreting plain paths as class path resource names
@@ -123,24 +125,19 @@ public class ClassPathXmlApplicationContext extends AbstractXmlApplicationContex
 		this(configLocations, refresh, null);
 	}
 
+
 	/**
-	 * Create a new ClassPathXmlApplicationContext with the given parent,
-	 * loading the definitions from the given XML files.
-	 *
-	 * @param configLocations array of resource locations
-	 * @param refresh         whether to automatically refresh the context,
-	 *                        loading all bean definitions and creating all singletons.
-	 *                        Alternatively, call refresh manually after further configuring the context.
-	 * @param parent          the parent context
-	 * @throws BeansException if context creation failed
-	 * @see #refresh()
+	 * 配置文件的构造方法，configLocations是spring的配置文件。
 	 */
 	public ClassPathXmlApplicationContext(
 			String[] configLocations, boolean refresh, @Nullable ApplicationContext parent)
 			throws BeansException {
 
 		super(parent);
+		//根据提供的路径，处理成配置文件数组(以分号、逗号、空格、tab、换行符分割)
 		setConfigLocations(configLocations);
+		//System.out.println(Arrays.asList(configLocations).toString());
+		//核心代码
 		if (refresh) {
 			refresh();
 		}

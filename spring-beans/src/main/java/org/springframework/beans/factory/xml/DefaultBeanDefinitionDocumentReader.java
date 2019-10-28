@@ -84,15 +84,11 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 	private BeanDefinitionParserDelegate delegate;
 
 
-	/**
-	 * This implementation parses bean definitions according to the "spring-beans" XSD
-	 * (or DTD, historically).
-	 * <p>Opens a DOM Document; then initializes the default settings
-	 * specified at the {@code <beans/>} level; then parses the contained bean definitions.
-	 */
+
 	@Override
 	public void registerBeanDefinitions(Document doc, XmlReaderContext readerContext) {
 		this.readerContext = readerContext;
+		// 从 xml 根节点开始解析文件
 		doRegisterBeanDefinitions(doc.getDocumentElement());
 	}
 
@@ -114,22 +110,20 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 	}
 
 
-	/**
-	 * Register each bean definition within the given root {@code <beans/>} element.
-	 */
-	@SuppressWarnings("deprecation")  // for Environment.acceptsProfiles(String...)
+
 	protected void doRegisterBeanDefinitions(Element root) {
-		// Any nested <beans> elements will cause recursion in this method. In
-		// order to propagate and preserve <beans> default-* attributes correctly,
-		// keep track of the current (parent) delegate, which may be null. Create
-		// the new (child) delegate with a reference to the parent for fallback purposes,
-		// then ultimately reset this.delegate back to its original (parent) reference.
-		// this behavior emulates a stack of delegates without actually necessitating one.
+		// 我们看名字就知道，BeanDefinitionParserDelegate 必定是一个重要的类，它负责解析 Bean 定义，
+
+		// 这里为什么要定义一个 parent? 看到后面就知道了，是递归问题，
+		// 因为 <beans /> 内部是可以定义 <beans /> 的，所以这个方法的 root 其实不一定就是 xml 的根节点，
+		// 也可以是嵌套在里面的 <beans /> 节点，从源码分析的角度，我们当做根节点就好了
 		BeanDefinitionParserDelegate parent = this.delegate;
 		this.delegate = createDelegate(getReaderContext(), root, parent);
 
 		if (this.delegate.isDefaultNamespace(root)) {
 			String profileSpec = root.getAttribute(PROFILE_ATTRIBUTE);
+
+			//这个就是springboot的不同环境下使用不同的配置文件。
 			if (StringUtils.hasText(profileSpec)) {
 				String[] specifiedProfiles = StringUtils.tokenizeToStringArray(
 						profileSpec, BeanDefinitionParserDelegate.MULTI_VALUE_ATTRIBUTE_DELIMITERS);
@@ -145,9 +139,10 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 			}
 		}
 
-		preProcessXml(root);
+		preProcessXml(root); // 钩子
+		// 往下看
 		parseBeanDefinitions(root, this.delegate);
-		postProcessXml(root);
+		postProcessXml(root); // 钩子
 
 		this.delegate = parent;
 	}
@@ -161,31 +156,35 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 	}
 
 	/**
-	 * Parse the elements at the root level in the document:
-	 * "import", "alias", "bean".
-	 * @param root the DOM root element of the document
+	 * // default namespace 涉及到的就四个标签 <import />、<alias />、<bean /> 和 <beans />，
+	 * // 其他的属于 custom 的
+	 * @param root
+	 * @param delegate
 	 */
 	protected void parseBeanDefinitions(Element root, BeanDefinitionParserDelegate delegate) {
-		if (delegate.isDefaultNamespace(root)) {
+		if (delegate.isDefaultNamespace(root)) {//解析默认的包命名空间
 			NodeList nl = root.getChildNodes();
 			for (int i = 0; i < nl.getLength(); i++) {
 				Node node = nl.item(i);
 				if (node instanceof Element) {
 					Element ele = (Element) node;
 					if (delegate.isDefaultNamespace(ele)) {
+						// 解析 default namespace 下面的几个元素，包括bean标签
 						parseDefaultElement(ele, delegate);
 					}
 					else {
+						// 解析其他 namespace 的元素
 						delegate.parseCustomElement(ele);
 					}
 				}
 			}
 		}
-		else {
+		else {//解析含有其他类型的包命名空间。
 			delegate.parseCustomElement(root);
 		}
 	}
 
+	//解析默认的标签的属性值
 	private void parseDefaultElement(Element ele, BeanDefinitionParserDelegate delegate) {
 		if (delegate.nodeNameEquals(ele, IMPORT_ELEMENT)) {
 			importBeanDefinitionResource(ele);
@@ -194,10 +193,11 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 			processAliasRegistration(ele);
 		}
 		else if (delegate.nodeNameEquals(ele, BEAN_ELEMENT)) {
+			// 处理 <bean /> 标签定义，这也算是我们的重点吧
 			processBeanDefinition(ele, delegate);
 		}
 		else if (delegate.nodeNameEquals(ele, NESTED_BEANS_ELEMENT)) {
-			// recurse
+			// 如果碰到的是嵌套的 <beans /> 标签，需要递归
 			doRegisterBeanDefinitions(ele);
 		}
 	}
@@ -299,22 +299,45 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 	}
 
 	/**
-	 * Process the given bean element, parsing the bean definition
-	 * and registering it with the registry.
+	 *
+	 * **************解析 <bean/> 标签***************
+	 * <p></>
+	 *
+	 *<bean id="exampleBean" name="name1, name2, name3" class="com.javadoop.ExampleBean"
+	 *       scope="singleton" lazy-init="true" init-method="init" destroy-method="cleanup">
+	 *
+	 *     <!-- 可以用下面三种形式指定构造参数 -->
+	 *     <constructor-arg type="int" value="7500000"/>
+	 *     <constructor-arg name="years" value="7500000"/>
+	 *     <constructor-arg index="0" value="7500000"/>
+	 *
+	 *     <!-- property 的几种情况 -->
+	 *     <property name="beanOne">
+	 *         <ref bean="anotherExampleBean"/>
+	 *     </property>
+	 *     <property name="beanTwo" ref="yetAnotherBean"/>
+	 *     <property name="integerProperty" value="1"/>
+	 * </bean>
 	 */
+
 	protected void processBeanDefinition(Element ele, BeanDefinitionParserDelegate delegate) {
+		//将 <bean /> 节点中的信息提取出来，然后封装到一个 BeanDefinitionHolder 中，细节往下看
 		BeanDefinitionHolder bdHolder = delegate.parseBeanDefinitionElement(ele);
+
+
+		// 下面的几行先不要看，跳过先，跳过先，跳过先，后面会继续说的
 		if (bdHolder != null) {
+			// 如果有自定义属性的话，进行相应的解析，先忽略
 			bdHolder = delegate.decorateBeanDefinitionIfRequired(ele, bdHolder);
 			try {
-				// Register the final decorated instance.
+				// 我们把这步叫做 注册Bean 吧
 				BeanDefinitionReaderUtils.registerBeanDefinition(bdHolder, getReaderContext().getRegistry());
 			}
 			catch (BeanDefinitionStoreException ex) {
 				getReaderContext().error("Failed to register bean definition with name '" +
 						bdHolder.getBeanName() + "'", ele, ex);
 			}
-			// Send registration event.
+			// 注册完成后，发送事件，本文不展开说这个
 			getReaderContext().fireComponentRegistered(new BeanComponentDefinition(bdHolder));
 		}
 	}

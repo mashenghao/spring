@@ -1,10 +1,12 @@
-package cn.chapter1;
+package chapter2;
 
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 /**
- * IOC，控制反转
+ * spring的bean容器创建：
+ * ApplicationContext 启动过程中，
+ * 会负责创建实例 Bean，往各个 Bean 中注入依赖等
  *
  * @author: mahao
  * @date: 2019/10/28
