@@ -5,8 +5,9 @@ import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 /**
  * spring的bean容器创建：
- * ApplicationContext 启动过程中，
- * 会负责创建实例 Bean，往各个 Bean 中注入依赖等
+ * ApplicationContext 启动过程中，将配置文件的信息封装成BeanDefintion，存入到
+ * beanfactory的map中。当尚未进行初始化等工作，初始化工作看chapter3中
+ *
  *
  * @author: mahao
  * @date: 2019/10/28

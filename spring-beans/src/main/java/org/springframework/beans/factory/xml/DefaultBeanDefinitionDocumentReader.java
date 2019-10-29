@@ -164,6 +164,7 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 	protected void parseBeanDefinitions(Element root, BeanDefinitionParserDelegate delegate) {
 		if (delegate.isDefaultNamespace(root)) {//解析默认的包命名空间
 			NodeList nl = root.getChildNodes();
+			//遍历根节点下的所有子节点，都注册进beanfactory中
 			for (int i = 0; i < nl.getLength(); i++) {
 				Node node = nl.item(i);
 				if (node instanceof Element) {
