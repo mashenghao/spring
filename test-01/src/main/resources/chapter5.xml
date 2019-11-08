@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns="http://www.springframework.org/schema/beans"
+	   xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+	<bean id="userService" class="bean.UserServiceImpl"></bean>
+	<bean id="orderService" class="bean.OrderServiceImpl"></bean>
+
+	<!--两个通知，配置到Spring容器中-->
+	<bean id="logArgsAdvice" class="chapter4_aop1.LogArgsAdvice"></bean>
+	<bean id="logResultAdvice" class="chapter4_aop1.LogResultAdvice"></bean>
+
+	<!--使用BeanNameAutoProxyCreator，并配置好要被增强的类的扫描规则-->
+	<!--
+
+	<bean class="org.springframework.aop.framework.autoproxy.BeanNameAutoProxyCreator">
+
+		&lt;!&ndash;配置通知，也是可以使用通知，advisor和拦截器&ndash;&gt;
+		<property name="interceptorNames">
+			<list>
+				<value>logArgsAdvice</value>
+				<value>logResultAdvice</value>
+			</list>
+		</property>
+		&lt;!&ndash;指定要被增强的类的规则,是bean的名字&ndash;&gt;
+		<property name="beanNames" value="*Service"></property>
+	</bean>
+
+	-->
+
+
+	<!--使用DefaultAdvisorAutoProxyCreator代理所有类，然后用切点匹配增强的方法。-->
+	<bean class="org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator"></bean>
+	<bean class="org.springframework.aop.support.RegexpMethodPointcutAdvisor">
+		<property name="advice" ref="logArgsAdvice"></property>
+		<property name="pattern" value="bean.*.query.*"></property>
+	</bean>
+</beans>

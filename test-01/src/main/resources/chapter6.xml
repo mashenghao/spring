@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns="http://www.springframework.org/schema/beans" xmlns:aop="http://www.springframework.org/schema/aop"
+	   xmlns:context="http://www.springframework.org/schema/aop"
+	   xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/aop https://www.springframework.org/schema/aop/spring-aop.xsd">
+
+	<!--一旦开启了上面的配置，那么所有使用 @Aspect 注解的 bean 都会被 Spring
+	当做用来实现 AOP 的配置类，我们称之为一个 Aspect切面。-->
+	<!--开启aop的自动代理-->
+	<aop:aspectj-autoproxy/>
+
+	<bean id="myService" class="chapter6_aop3_aspectJ.MyService"></bean>
+	<bean id="adviceExample" class="chapter6_aop3_aspectJ.AdviceExample"></bean>
+	<bean id="aspect" class="chapter6_aop3_aspectJ.MyAspect"></bean>
+</beans>
